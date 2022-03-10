@@ -144,7 +144,9 @@ public class UDPMavLinkPort extends MAVLinkPort {
                     System.out.println("[update] msg.name: " + msg.getMsgName() + ", type: " + msg.getMsgType());
                 }
                 IndicateReceivedMessage(msg.getMsgType());
+                //if(!"HIL_SENSOR".equals(msg.getMsgName()) || !"HIL_GPS".equals(msg.getMsgName())){
                 sendMessage(msg);
+                //}
             } catch (IOException e) {
                 // Silently ignore this exception, we likely just have nobody on this port yet/already
                 return;

@@ -10,9 +10,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.*;
+
 /**
  * User: ton Date: 28.11.13 Time: 23:30
  */
+
+
 public class SerialMAVLinkPort extends MAVLinkPort {
     private MAVLinkSchema schema = null;
     private SerialPort serialPort = null;
@@ -144,7 +150,9 @@ public class SerialMAVLinkPort extends MAVLinkPort {
                 if (msg == null) {
                     break;
                 }
+                //if("HIL_SENSOR".equals(msg.getMsgName()) || "HIL_GPS".equals(msg.getMsgName())){
                 sendMessage(msg);
+                //}
             } catch (IOException e) {
                 e.printStackTrace();
                 return;

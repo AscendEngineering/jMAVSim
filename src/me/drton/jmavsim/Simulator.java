@@ -35,7 +35,8 @@ public class Simulator implements Runnable {
     private static enum Port {
         SERIAL,
         UDP,
-        TCP
+        TCP,
+        UDP_SERIAL
     }
     private static Port PORT = Port.UDP;
 
@@ -211,7 +212,14 @@ public class Simulator implements Runnable {
 
         // Create MAVLink connections
         MAVLinkConnection connHIL = new MAVLinkConnection(world);
-        world.addObject(connHIL);
+        MAVLinkConnection connHIL_serial = new MAVLinkConnection(world);
+        MAVLinkConnection connHIL_udp = new MAVLinkConnection(world);
+        if (PORT != Port.UDP_SERIAL) {
+            world.addObject(connHIL);
+        } else {
+            world.addObject(connHIL_serial);
+            world.addObject(connHIL_udp);
+        }
 
         // Create ports
         if (PORT == Port.SERIAL) {
@@ -228,7 +236,7 @@ public class Simulator implements Runnable {
                 port.setMonitorMessageID(monitorMessageIds);
             }
             autopilotMavLinkPort = port;
-        } else {
+        } else if (PORT == Port.UDP){
             UDPMavLinkPort port = new UDPMavLinkPort(schema);
             port.setDebug(DEBUG_MODE);
             port.setup(autopilotIpAddress, autopilotPort);
@@ -236,10 +244,28 @@ public class Simulator implements Runnable {
                 port.setMonitorMessageID(monitorMessageIds);
             }
             autopilotMavLinkPort = port;
+        } else {
+            SerialMAVLinkPort serial_port = new SerialMAVLinkPort(schema);
+            serial_port.setup(serialPath, serialBaudRate, 8, 1, 0);
+            serial_port.setDebug(DEBUG_MODE);
+            autopilotMavLinkPort = serial_port;
+            connHIL_serial.addNode(autopilotMavLinkPort);
+            //System.out.println(autopilotMavLinkPort);
+            UDPMavLinkPort udp_port = new UDPMavLinkPort(schema);
+            //System.out.println(connHIL);
+
+            udp_port.setDebug(DEBUG_MODE);
+            udp_port.setup(autopilotIpAddress, autopilotPort);
+            if (monitorMessage) {
+                udp_port.setMonitorMessageID(monitorMessageIds);
+            }
+            autopilotMavLinkPort = udp_port;
+            //System.out.println(autopilotMavLinkPort);
+            connHIL_udp.addNode(autopilotMavLinkPort);
         }
 
         // allow HIL and GCS to talk to this port
-        connHIL.addNode(autopilotMavLinkPort);
+        //connHIL.addNode(autopilotMavLinkPort);
 
         // We don't want to spam QGC or SDK with HIL messages.
         String[] skipMessages = {
@@ -335,7 +361,12 @@ public class Simulator implements Runnable {
         }
         hilSystem.setSimulator(this);
         //hilSystem.setHeartbeatInterval(0);
-        connHIL.addNode(hilSystem);
+        if (PORT != Port.UDP_SERIAL) {
+            connHIL.addNode(hilSystem);
+        } else {
+            connHIL_udp.addNode(hilSystem);
+            connHIL_serial.addNode(hilSystem);
+        }
         world.addObject(vehicle);
 
         if (SHOW_GUI) {
@@ -694,6 +725,44 @@ public class Simulator implements Runnable {
                 } else {
                     // if user ONLY passes in -m, monitor all messages.
                     continue;
+                }
+            } else if (arg.equalsIgnoreCase("-serialudp")) {
+                PORT = Port.UDP_SERIAL;
+                if (i == args.length) {
+                    // only arg is -udp, so use default values.
+                    break;
+                }
+                if (i < args.length) {
+                    String nextArg = args[i++];
+                    System.out.println(nextArg);
+
+                    if (nextArg.startsWith("-")) {
+                        // only turning on udp, but want to use default ports
+                        i--;
+                        continue;
+                    }
+                    try {
+                        // try to parse passed-in ports.
+                        //String[] list = nextArg.split(" ");
+                        //if (list.length != 2) {
+                        //    System.err.println("Expected: " + UDP_STRING + ", got: " + Arrays.toString(list));
+                        //    return;
+                        //}
+                        String[] list = args[3].split(":");
+                        autopilotIpAddress = list[0];
+                        autopilotPort = Integer.parseInt(list[1]);
+                        serialPath = args[1];
+                        serialBaudRate = Integer.parseInt(args[2]);
+                        String nextArg1 = args[i++];
+                        String nextArg2 = args[i++];
+
+                    } catch (NumberFormatException e) {
+                        System.err.println("Expected: " + USAGE_STRING + ", got: " + e.toString());
+                        return;
+                    }
+                } else {
+                    System.err.println("-udp needs an argument: " + UDP_STRING);
+                    return;
                 }
             } else if (arg.equalsIgnoreCase("-udp")) {
                 PORT = Port.UDP;

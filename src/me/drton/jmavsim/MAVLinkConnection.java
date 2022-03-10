@@ -7,11 +7,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.*;
+
 /**
  * User: ton Date: 13.02.14 Time: 21:50
  */
 public class MAVLinkConnection extends WorldObject {
-    private List<MAVLinkNode> nodes = new ArrayList<MAVLinkNode>();
+    public List<MAVLinkNode> nodes = new ArrayList<MAVLinkNode>();
     private Set<Integer> skipMessages = new HashSet<Integer>();
 
     public MAVLinkConnection(World world) {
